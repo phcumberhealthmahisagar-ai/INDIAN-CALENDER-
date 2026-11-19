@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indian Calendar</title>
+<style>
+body{margin:0;font-family:sans-serif;background:#fff8f0;color:#333}
+.top{background:#e65100;color:#fff;padding:14px;display:flex;align-items:center;justify-content:space-between}
+.top button{background:none;border:none;color:#fff;font-size:28px;padding:0 14px}
+.top div{font-size:20px;font-weight:bold;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px}
+.h{text-align:center;font-size:12px;font-weight:bold;color:#e65100;padding:4px 0}
+.c{background:#fff;min-height:58px;border-radius:6px;padding:3px;text-align:center;overflow:hidden;border:2px solid transparent}
+.c .n{font-size:16px}
+.c .t{font-size:9px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c .f{font-size:9px;color:#c62828;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sun .n{color:#c62828}
+.today{background:#ffe0b2}
+.sel{border-color:#e65100}
+.box{margin:8px;padding:12px;background:#fff;border-radius:8px;font-size:15px;line-height:1.6}
+.box b{color:#e65100}
+.tb{display:block;margin:6px auto;padding:8px 22px;background:#e65100;color:#fff;border:none;border-radius:6px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="top">
+<button onclick="move(-1)">&#8249;</button>
+<div id="title"></div>
+<button onclick="move(1)">&#8250;</button>
+</div>
+<div id="grid" class="grid"></div>
+<button class="tb" onclick="goToday()">Today</button>
+<div id="detail" class="box"></div>
+<div id="list" class="box"></div>
+<script>
+var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var TITHI=["Pratipada","Dwitiya","Tritiya","Chaturthi","Panchami","Shashthi","Saptami","Ashtami","Navami","Dashami","Ekadashi","Dwadashi","Trayodashi","Chaturdashi",""];
+var NAK=["Ashwini","Bharani","Krittika","Rohini","Mrigashira","Ardra","Punarvasu","Pushya","Ashlesha","Magha","Purva Phalguni","Uttara Phalguni","Hasta","Chitra","Swati","Vishakha","Anuradha","Jyeshtha","Mula","Purva Ashadha","Uttara Ashadha","Shravana","Dhanishta","Shatabhisha","Purva Bhadrapada","Uttara Bhadrapada","Revati"];
+var FIXED={"01-14":"Makar Sankranti","01-26":"Republic Day","04-14":"Ambedkar Jayanti","08-15":"Independence Day","10-02":"Gandhi Jayanti","12-25":"Christmas"};
+var DATED={
+"2026-10-20":"Dussehra",
+"2026-11-08":"Diwali",
+"2027-02-11":"Vasant Panchami",
+"2027-03-10":"Eid-ul-Fitr",
+"2027-03-22":"Holi",
+"2027-03-26":"Good Friday",
+"2027-04-15":"Rama Navami",
+"2027-05-17":"Bakrid",
+"2027-06-16":"Muharram",
+"2027-08-25":"Janmashtami",
+"2027-09-04":"Ganesh Chaturthi",
+"2027-09-12":"Onam",
+"2027-09-30":"Navratri begins",
+"2027-10-09":"Dussehra",
+"2027-10-29":"Diwali",
+"2027-10-31":"Bhai Dooj",
+"2027-11-14":"Guru Nanak Jayanti"
+};
+function pad(x){return x<10?"0"+x:""+x}
+function norm(d){d=d%360;return d<0?d+360:d}
+function sn(deg){return Math.sin(deg*Math.PI/180)}
+function sunLon(T){
+var L0=280.46646+36000.76983*T;
+var M=357.52911+35999.05029*T;
+var C=(1.914602-0.004817*T)*sn(M)+0.019993*sn(2*M)+0.000289*sn(3*M);
+return norm(L0+C);
+}
+function moonLon(T){
+var L=218.3164477+481267.88123421*T;
+var D=297.8501921+445267.1114034*T;
+var M=357.5291092+35999.0502909*T;
+var P=134.9633964+477198.8675055*T;
+var F=93.272095+483202.0175233*T;
+return norm(L+6.288774*sn(P)+1.274027*sn(2*D-P)+0.658314*sn(2*D)+0.213618*sn(2*P)-0.185116*sn(M)-0.114332*sn(2*F)+0.058793*sn(2*D-2*P)+0.057066*sn(2*D-M-P)+0.053322*sn(2*D+P)+0.045758*sn(2*D-M)-0.040923*sn(M-P)-0.03472*sn(D)-0.030383*sn(M+P));
+}
+function panchang(y,m,d){
+var J=Date.UTC(y,m,d,1,0,0)/86400000+2440587.5;
+var T=(J-2451545)/36525;
+var s=sunLon(T);
+var mo=moonLon(T);
+var t=Math.floor(norm(mo-s)/12);
+var ay=23.857+0.013969*(J-2451545)/365.25;
+var n=Math.floor(norm(mo-ay)/(360/27));
+var nm=t%15;
+var name=(nm===14)?(t<15?"Purnima":"Amavasya"):TITHI[nm];
+return {tithi:(t<15?"Shukla ":"Krishna ")+name, short:(t<15?"Sh ":"Kr ")+name, nak:NAK[n]};
+}
+function fests(y,m,d){
+var k=pad(m+1)+"-"+pad(d);
+var out=[];
+if(DATED[y+"-"+k])out.push(DATED[y+"-"+k]);
+if(FIXED[k])out.push(FIXED[k]);
+return out;
+}
+var now=new Date();
+var vy=now.getFullYear(), vm=now.getMonth();
+var sy=vy, sm=vm, sd=now.getDate();
+function move(n){
+vm+=n;
+if(vm<0){vm=11;vy--}
+if(vm>11){vm=0;vy++}
+render();
+}
+function goToday(){
+var t=new Date();
+vy=t.getFullYear();vm=t.getMonth();
+sy=vy;sm=vm;sd=t.getDate();
+render();
+}
+function pick(d){sy=vy;sm=vm;sd=d;render()}
+function render(){
+document.getElementById("title").textContent=MONTHS[vm]+" "+vy;
+var h="";
+var i;
+for(i=0;i<7;i++)h+='<div class="h">'+DAYS[i]+'</div>';
+var first=new Date(vy,vm,1).getDay();
+var dim=new Date(vy,vm+1,0).getDate();
+for(i=0;i<first;i++)h+="<div></div>";
+var tn=new Date();
+var d;
+for(d=1;d<=dim;d++){
+var cls="c";
+if(new Date(vy,vm,d).getDay()===0)cls+=" sun";
+if(vy===tn.getFullYear()&&vm===tn.getMonth()&&d===tn.getDate())cls+=" today";
+if(vy===sy&&vm===sm&&d===sd)cls+=" sel";
+var p=panchang(vy,vm,d);
+var f=fests(vy,vm,d);
+h+='<div class="'+cls+'" onclick="pick('+d+')"><div class="n">'+d+'</div>'+(f.length?'<div class="f">'+f[0]+'</div>':'')+'<div class="t">'+p.short+'</div></div>';
+}
+document.getElementById("grid").innerHTML=h;
+var sp=panchang(sy,sm,sd);
+var sf=fests(sy,sm,sd);
+var sdt=new Date(sy,sm,sd);
+var dh='<b>'+DAYS[sdt.getDay()]+', '+sd+' '+MONTHS[sm]+' '+sy+'</b><br>Tithi: '+sp.tithi+'<br>Nakshatra: '+sp.nak+'<br>Festival: '+(sf.length?sf.join(", "):"None");
+document.getElementById("detail").innerHTML=dh;
+var lh="<b>Festivals this month</b>";
+var any=false;
+for(d=1;d<=dim;d++){
+var ff=fests(vy,vm,d);
+if(ff.length){any=true;lh+="<br>"+d+" "+MONTHS[vm].substring(0,3)+" - "+ff.join(", ");}
+}
+if(!any)lh+="<br>None listed";
+lh+='<br><small>Tithi and nakshatra are worked out for sunrise and can differ a little from a printed panchang. Festival dates can differ by a day in some places.</small>';
+document.getElementById("list").innerHTML=lh;
+}
+render();
+</script>
+</body>
+</html>
